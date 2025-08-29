@@ -112,8 +112,27 @@ export function PasswordForm({
 			params.append("requestId", requestId);
 		}
 
-		return router.push("/password/set?" + params);
-	}
+  return (
+    <form className="w-full">
+      <div className={`${error && "transform-gpu animate-shake"}`}>
+        <TextInput
+          type="password"
+          autoComplete="password"
+          {...register("password", { required: t("verify.required.password") })}
+          label={t("verify.labels.password")}
+          data-testid="password-text-input"
+        />
+        {!loginSettings?.hidePasswordReset && (
+          <button
+            className="text-sm transition-all hover:text-primary-light-500 dark:hover:text-primary-dark-500"
+            onClick={() => resetPasswordAndContinue()}
+            type="button"
+            disabled={loading}
+            data-testid="reset-button"
+          >
+            <Translated i18nKey="verify.resetPassword" namespace="password" />
+          </button>
+        )}
 
 	return (
 		<form className="w-full">
