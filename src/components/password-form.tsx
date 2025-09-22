@@ -26,15 +26,12 @@ type Props = {
 	requestId?: string;
 };
 
-export function PasswordForm({
-	loginSettings,
-	loginName,
-	organization,
-	requestId,
-}: Props) {
-	const { register, handleSubmit, formState } = useForm<Inputs>({
-		mode: "onBlur",
-	});
+export function PasswordForm({ loginSettings, loginName, organization, requestId }: Props) {
+  const { register, handleSubmit, formState } = useForm<Inputs>({
+    mode: "onBlur",
+  });
+
+  const t = useTranslations("password");
 
 	const t = useTranslations("password");
 
@@ -45,9 +42,22 @@ export function PasswordForm({
 
 	const router = useRouter();
 
-	async function submitPassword(values: Inputs) {
-		setError("");
-		setLoading(true);
+    const response = await sendPassword({
+      loginName,
+      organization,
+      checks: create(ChecksSchema, {
+        password: { password: values.password },
+      }),
+      requestId,
+    })
+      .catch((error) => {
+        setError("Could not verify password");
+        console.error("Error verifying password:", error);
+        return;
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
 		const response = await sendPassword({
 			loginName,
@@ -134,27 +144,8 @@ export function PasswordForm({
           </button>
         )}
 
-	return (
-		<form className="w-full">
-			<div className={`${error && "transform-gpu animate-shake"}`}>
-				<TextInput
-					type="password"
-					autoComplete="password"
-					{...register("password", { required: t("verify.required.password") })}
-					label="Password"
-					data-testid="password-text-input"
-				/>
-				{!loginSettings?.hidePasswordReset && (
-					<button
-						className="text-sm transition-all hover:text-primary-light-500 dark:hover:text-primary-dark-500"
-						onClick={() => resetPasswordAndContinue()}
-						type="button"
-						disabled={loading}
-						data-testid="reset-button"
-					>
-						<Translated i18nKey="verify.resetPassword" namespace="password" />
-					</button>
-				)}
+        {loginName && <input type="hidden" name="loginName" autoComplete="username" value={loginName} />}
+      </div>
 
 				{loginName && (
 					<input
@@ -172,27 +163,20 @@ export function PasswordForm({
 				</div>
 			)}
 
-			{error && (
-				<div className="py-4" data-testid="error">
-					<Alert>{error}</Alert>
-				</div>
-			)}
-
-			<div className="mt-8 flex w-full flex-row items-center">
-				<BackButton data-testid="back-button" />
-				<span className="flex-grow"></span>
-				<Button
-					type="submit"
-					className="self-end"
-					variant={ButtonVariants.Primary}
-					disabled={loading || !formState.isValid}
-					onClick={handleSubmit(submitPassword)}
-					data-testid="submit-button"
-				>
-					{loading && <Spinner className="mr-2 h-5 w-5" />}{" "}
-					<Translated i18nKey="verify.submit" namespace="password" />
-				</Button>
-			</div>
-		</form>
-	);
+      <div className="mt-8 flex w-full flex-row items-center">
+        <BackButton data-testid="back-button" />
+        <span className="flex-grow"></span>
+        <Button
+          type="submit"
+          className="self-end"
+          variant={ButtonVariants.Primary}
+          disabled={loading || !formState.isValid}
+          onClick={handleSubmit(submitPassword)}
+          data-testid="submit-button"
+        >
+          {loading && <Spinner className="mr-2 h-5 w-5" />} <Translated i18nKey="verify.submit" namespace="password" />
+        </Button>
+      </div>
+    </form>
+  );
 }
