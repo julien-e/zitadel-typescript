@@ -23,7 +23,7 @@ services:
       - ZITADEL_SERVICE_USER_TOKEN_FILE=${ZITADEL_SERVICE_USER_TOKEN_FILE}
     user: '0'
     volumes: [../files/zitadel:/current-dir:ro]
-    networks: [dokploy_network]
+    networks: [dokploy-network]
     healthcheck:
       test:
         - CMD
