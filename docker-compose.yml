@@ -1,14 +1,43 @@
 ---
 version: '3.8'
 services:
-  zitadel-typescript:
+  login:
     build:
       context: .
       dockerfile: Dockerfile
-    environment: [NODE_ENV=production, LANGUAGE=fr, LOCALE=fr-FR]
-    volumes: [./config:/app/config]
-    restart: unless-stopped
-    networks: [dokploy-network]
+    container_name: zitadel-login-ui
+    environment:
+        # Configuration Node.js
+      - NODE_ENV=production
+      - PORT=3000
+
+        # Configuration linguistique
+      - LANGUAGE=fr
+      - LOCALE=fr-FR
+      - TZ=Europe/Paris
+
+        # Configuration ZITADEL (OBLIGATOIRE)
+      - ZITADEL_API_URL=${ZITADEL_API_URL}
+      - EXTERNAL_DOMAIN=${EXTERNAL_DOMAIN}
+      - CUSTOM_REQUEST_HEADERS=HOST:${EXTERNAL_DOMAIN}
+      - NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH}
+      - ZITADEL_SERVICE_USER_TOKEN_FILE=${ZITADEL_SERVICE_USER_TOKEN_FILE}
+      - ZITADEL_SERVICE_USER_TOKEN=${ZITADEL_SERVICE_USER_TOKEN}
+    user: '0'
+    volumes: [../files/zitadel:/current-dir:ro]
+    networks: [zitadel_network]
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --tries=1
+        - --spider
+        - http://localhost:3000/health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 networks:
   dokploy-network:
     external: true
