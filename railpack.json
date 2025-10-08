@@ -60,10 +60,10 @@
 					"description": "Chemin de base pour l'interface de login"
 				},
 				{
-					"key": "ZITADEL_SERVICE_USER_TOKEN_FILE",
-					"value": "/app/secrets/login-client.pat",
+					"key": "ZITADEL_SERVICE_USER_TOKEN",
+					"value": "",
 					"required": true,
-					"description": "Chemin vers le fichier de token du service user"
+					"description": "token du service user"
 				}
 			],
 			"ports": [
