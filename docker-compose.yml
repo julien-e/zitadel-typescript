@@ -21,6 +21,9 @@ services:
       - CUSTOM_REQUEST_HEADERS=HOST:${EXTERNAL_DOMAIN}
       - NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH}
       - ZITADEL_SERVICE_USER_TOKEN_FILE=${ZITADEL_SERVICE_USER_TOKEN_FILE}
+      - ZITADEL_SERVICE_USER_TOKEN=${ZITADEL_SERVICE_USER_TOKEN}
+
+        # Configuration optionnelle ZITADEL
     user: '0'
     volumes: [../files/zitadel:/current-dir:ro]
     networks: [dokploy-network]
