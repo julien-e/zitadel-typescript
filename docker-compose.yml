@@ -1,6 +1,6 @@
 ---
 services:
-  login:
+  zitadel-login:
     build:
       context: .
       dockerfile: Dockerfile
