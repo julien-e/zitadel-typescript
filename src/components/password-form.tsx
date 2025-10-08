@@ -150,7 +150,7 @@ export function PasswordForm({ loginSettings, loginName, organization, requestId
 				{loginName && (
 					<input
 						type="hidden"
-						name="Nom d'utilisateur"
+						name="loginName"
 						autoComplete="username"
 						value={loginName}
 					/>
