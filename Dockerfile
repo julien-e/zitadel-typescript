@@ -1,37 +1,38 @@
-FROM node:20-alpine AS base
+#  Copier les fichiers de dépendances
+COPY package*.json ./
+COPY yarn.lock* ./
+COPY pnpm-lock.yaml* ./
 
-FROM base AS build
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack prepare pnpm@10.13.1 --activate && \
-    apk update && \
-    rm -rf /var/cache/apk/*
-WORKDIR /app
-COPY pnpm-lock.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm fetch --frozen-lockfile
-COPY package.json ./
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
+# Installer les dépendances
+RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
+    elif [ -f pnpm-lock.yaml ]; then npm install -g pnpm && pnpm install --frozen-lockfile; \
+    else npm ci; fi
+
+# Copier le code source
 COPY . .
-RUN pnpm build:login:standalone
 
-FROM scratch AS build-out
-COPY --from=build /app/.next/standalone /
-COPY --from=build /app/.next/static /.next/static
-COPY public public
+# Build de l'application
+RUN if [ -f yarn.lock ]; then yarn build; \
+    elif [ -f pnpm-lock.yaml ]; then pnpm build; \
+    else npm run build; fi
 
-FROM base AS login-standalone
-WORKDIR /runtime
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
-# If /.env-file/.env is mounted into the container, its variables are made available to the server before it starts up.
-RUN mkdir -p /.env-file && touch /.env-file/.env && chown -R nextjs:nodejs /.env-file
-COPY --chown=nextjs:nodejs ./scripts/ ./
-COPY --chown=nextjs:nodejs --from=build-out / ./
-USER nextjs
-ENV HOSTNAME="0.0.0.0" \
-    NEXT_PUBLIC_BASE_PATH="/ui/v2/login" \
-    PORT=3000
-# TODO: Check healthy, not ready
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD ["/bin/sh", "-c", "node /runtime/healthcheck.js http://localhost:${PORT}/ui/v2/login/healthy"]
-ENTRYPOINT ["/runtime/entrypoint.sh"]
+# Stage 2: Production
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copier les fichiers nécessaires depuis le builder
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+
+# Variables d'environnement par défaut
+ENV NODE_ENV=production
+ENV LANGUAGE=fr
+ENV LOCALE=fr-FR
+
+# Exposer le port
+EXPOSE 3000
+
+# Démarrer l'application
+CMD ["node", "dist/index.js"]
