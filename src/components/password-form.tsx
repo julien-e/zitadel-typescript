@@ -1,13 +1,13 @@
 "use client";
 
-import { resetPassword, sendPassword } from "@/lib/server/password";
 import { create } from "@zitadel/client";
 import { ChecksSchema } from "@zitadel/proto/zitadel/session/v2/session_service_pb";
-import { LoginSettings } from "@zitadel/proto/zitadel/settings/v2/login_settings_pb";
+import type { LoginSettings } from "@zitadel/proto/zitadel/settings/v2/login_settings_pb";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { resetPassword, sendPassword } from "@/lib/server/password";
 import { Alert, AlertType } from "./alert";
 import { BackButton } from "./back-button";
 import { Button, ButtonVariants } from "./button";
@@ -16,164 +16,164 @@ import { Spinner } from "./spinner";
 import { Translated } from "./translated";
 
 type Inputs = {
-  password: string;
+	password: string;
 };
 
 type Props = {
-  loginSettings: LoginSettings | undefined;
-  loginName: string;
-  organization?: string;
-  requestId?: string;
+	loginSettings: LoginSettings | undefined;
+	loginName: string;
+	organization?: string;
+	requestId?: string;
 };
 
 export function PasswordForm({
-  loginSettings,
-  loginName,
-  organization,
-  requestId,
+	loginSettings,
+	loginName,
+	organization,
+	requestId,
 }: Props) {
-  const { register, handleSubmit, formState } = useForm<Inputs>({
-    mode: "onBlur",
-  });
-  
-  const t = useTranslations("password");
+	const { register, handleSubmit, formState } = useForm<Inputs>({
+		mode: "onBlur",
+	});
 
-  const [info, setInfo] = useState<string>("");
-  const [error, setError] = useState<string>("");
+	const t = useTranslations("password");
 
-  const [loading, setLoading] = useState<boolean>(false);
+	const [info, setInfo] = useState<string>("");
+	const [error, setError] = useState<string>("");
 
-  const router = useRouter();
+	const [loading, setLoading] = useState<boolean>(false);
 
-  async function submitPassword(values: Inputs) {
-    setError("");
-    setLoading(true);
+	const router = useRouter();
 
-    const response = await sendPassword({
-      loginName,
-      organization,
-      checks: create(ChecksSchema, {
-        password: { password: values.password },
-      }),
-      requestId,
-    })
-      .catch(() => {
-        setError("Could not verify password");
-        return;
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+	async function submitPassword(values: Inputs) {
+		setError("");
+		setLoading(true);
 
-    if (response && "error" in response && response.error) {
-      setError(response.error);
-      return;
-    }
+		const response = await sendPassword({
+			loginName,
+			organization,
+			checks: create(ChecksSchema, {
+				password: { password: values.password },
+			}),
+			requestId,
+		})
+			.catch(() => {
+				setError("Could not verify password");
+				return;
+			})
+			.finally(() => {
+				setLoading(false);
+			});
 
-    if (response && "redirect" in response && response.redirect) {
-      return router.push(response.redirect);
-    }
-  }
+		if (response && "error" in response && response.error) {
+			setError(response.error);
+			return;
+		}
 
-  async function resetPasswordAndContinue() {
-    setError("");
-    setInfo("");
-    setLoading(true);
+		if (response && "redirect" in response && response.redirect) {
+			return router.push(response.redirect);
+		}
+	}
 
-    const response = await resetPassword({
-      loginName,
-      organization,
-      requestId,
-    })
-      .catch(() => {
-        setError("Could not reset password");
-        return;
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+	async function resetPasswordAndContinue() {
+		setError("");
+		setInfo("");
+		setLoading(true);
 
-    if (response && "error" in response) {
-      setError(response.error);
-      return;
-    }
+		const response = await resetPassword({
+			loginName,
+			organization,
+			requestId,
+		})
+			.catch(() => {
+				setError("Could not reset password");
+				return;
+			})
+			.finally(() => {
+				setLoading(false);
+			});
 
-    setInfo("Password was reset. Please check your email.");
+		if (response && "error" in response) {
+			setError(response.error);
+			return;
+		}
 
-    const params = new URLSearchParams({
-      loginName: loginName,
-    });
+		setInfo("Password was reset. Please check your email.");
 
-    if (organization) {
-      params.append("organization", organization);
-    }
+		const params = new URLSearchParams({
+			loginName: loginName,
+		});
 
-    if (requestId) {
-      params.append("requestId", requestId);
-    }
+		if (organization) {
+			params.append("organization", organization);
+		}
 
-    return router.push("/password/set?" + params);
-  }
+		if (requestId) {
+			params.append("requestId", requestId);
+		}
 
-  return (
-    <form className="w-full">
-      <div className={`${error && "transform-gpu animate-shake"}`}>
-        <TextInput
-          type="password"
-          autoComplete="password"
-          {...register("password", { required: t("verify.required.password") })}
-          label="Password"
-          data-testid="password-text-input"
-        />
-        {!loginSettings?.hidePasswordReset && (
-          <button
-            className="text-sm transition-all hover:text-primary-light-500 dark:hover:text-primary-dark-500"
-            onClick={() => resetPasswordAndContinue()}
-            type="button"
-            disabled={loading}
-            data-testid="reset-button"
-          >
-            <Translated i18nKey="verify.resetPassword" namespace="password" />
-          </button>
-        )}
+		return router.push("/password/set?" + params);
+	}
 
-        {loginName && (
-          <input
-            type="hidden"
-            name="loginName"
-            autoComplete="username"
-            value={loginName}
-          />
-        )}
-      </div>
+	return (
+		<form className="w-full">
+			<div className={`${error && "transform-gpu animate-shake"}`}>
+				<TextInput
+					type="password"
+					autoComplete="password"
+					{...register("password", { required: t("verify.required.password") })}
+					label="Password"
+					data-testid="password-text-input"
+				/>
+				{!loginSettings?.hidePasswordReset && (
+					<button
+						className="text-sm transition-all hover:text-primary-light-500 dark:hover:text-primary-dark-500"
+						onClick={() => resetPasswordAndContinue()}
+						type="button"
+						disabled={loading}
+						data-testid="reset-button"
+					>
+						<Translated i18nKey="verify.resetPassword" namespace="password" />
+					</button>
+				)}
 
-      {info && (
-        <div className="py-4">
-          <Alert type={AlertType.INFO}>{info}</Alert>
-        </div>
-      )}
+				{loginName && (
+					<input
+						type="hidden"
+						name="Nom d'utilisateur"
+						autoComplete="username"
+						value={loginName}
+					/>
+				)}
+			</div>
 
-      {error && (
-        <div className="py-4" data-testid="error">
-          <Alert>{error}</Alert>
-        </div>
-      )}
+			{info && (
+				<div className="py-4">
+					<Alert type={AlertType.INFO}>{info}</Alert>
+				</div>
+			)}
 
-      <div className="mt-8 flex w-full flex-row items-center">
-        <BackButton data-testid="back-button" />
-        <span className="flex-grow"></span>
-        <Button
-          type="submit"
-          className="self-end"
-          variant={ButtonVariants.Primary}
-          disabled={loading || !formState.isValid}
-          onClick={handleSubmit(submitPassword)}
-          data-testid="submit-button"
-        >
-          {loading && <Spinner className="mr-2 h-5 w-5" />}{" "}
-          <Translated i18nKey="verify.submit" namespace="password" />
-        </Button>
-      </div>
-    </form>
-  );
+			{error && (
+				<div className="py-4" data-testid="error">
+					<Alert>{error}</Alert>
+				</div>
+			)}
+
+			<div className="mt-8 flex w-full flex-row items-center">
+				<BackButton data-testid="back-button" />
+				<span className="flex-grow"></span>
+				<Button
+					type="submit"
+					className="self-end"
+					variant={ButtonVariants.Primary}
+					disabled={loading || !formState.isValid}
+					onClick={handleSubmit(submitPassword)}
+					data-testid="submit-button"
+				>
+					{loading && <Spinner className="mr-2 h-5 w-5" />}{" "}
+					<Translated i18nKey="verify.submit" namespace="password" />
+				</Button>
+			</div>
+		</form>
+	);
 }
