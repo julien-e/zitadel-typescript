@@ -23,6 +23,10 @@
 	},
 	"loginname": {
 		"title": "Bon retour !",
+		"loginName": "Nom de connexion",
+		"username": "Nom d'utilisateur",
+		"usernameOrPhone": "Nom d'utilisateur ou téléphone",
+		"usernameOrEmail": "Nom d'utilisateur ou e-mail",
 		"description": "Entrez vos identifiants.",
 		"register": "Enregistrer un nouvel utilisateur",
 		"submit": "Continuer",
