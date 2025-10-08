@@ -4,31 +4,31 @@ import { DEFAULT_CSP } from "./constants/csp.js";
 const withNextIntl = createNextIntlPlugin();
 
 const secureHeaders = [
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
-  {
-    key: "Referrer-Policy",
-    value: "origin-when-cross-origin",
-  },
-  {
-    key: "X-Frame-Options",
-    value: "SAMEORIGIN",
-  },
-  {
-    key: "X-Content-Type-Options",
-    value: "nosniff",
-  },
-  {
-    key: "X-XSS-Protection",
-    value: "1; mode=block",
-  },
-  {
-    key: "Content-Security-Policy",
-    value: `${DEFAULT_CSP} frame-ancestors 'none'`,
-  },
-  { key: "X-Frame-Options", value: "deny" },
+	{
+		key: "Strict-Transport-Security",
+		value: "max-age=63072000; includeSubDomains; preload",
+	},
+	{
+		key: "Referrer-Policy",
+		value: "origin-when-cross-origin",
+	},
+	{
+		key: "X-Frame-Options",
+		value: "SAMEORIGIN",
+	},
+	{
+		key: "X-Content-Type-Options",
+		value: "nosniff",
+	},
+	{
+		key: "X-XSS-Protection",
+		value: "1; mode=block",
+	},
+	{
+		key: "Content-Security-Policy",
+		value: `${DEFAULT_CSP} frame-ancestors 'none'`,
+	},
+	{ key: "X-Frame-Options", value: "deny" },
 ];
 
 /** @type {import('next').NextConfig} */

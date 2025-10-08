@@ -1,0 +1,14 @@
+---
+version: '3.8'
+services:
+  zitadel-typescript:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment: [NODE_ENV=production, LANGUAGE=fr, LOCALE=fr-FR]
+    volumes: [./config:/app/config]
+    restart: unless-stopped
+    networks: [dokploy-network]
+networks:
+  dokploy-network:
+    external: true

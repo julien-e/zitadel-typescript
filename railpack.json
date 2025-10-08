@@ -1,0 +1,121 @@
+{
+	"name": "ZITADEL TypeScript (Français)",
+	"description": "Template ZITADEL TypeScript avec interface française pour l'authentification et la gestion des utilisateurs",
+	"version": "1.0.0",
+	"author": "Votre Nom",
+	"logo": "https://zitadel.com/logo.svg",
+	"tags": ["authentication", "zitadel", "typescript", "oauth", "sso"],
+	"services": [
+		{
+			"name": "zitadel-typescript-fr",
+			"type": "application",
+			"image": "node:18-alpine",
+			"buildConfig": {
+				"dockerfile": "Dockerfile",
+				"context": "."
+			},
+			"env": [
+				{
+					"key": "NODE_ENV",
+					"value": "production",
+					"description": "Environment Node.js"
+				},
+				{
+					"key": "LANGUAGE",
+					"value": "fr",
+					"description": "Langue de l'interface"
+				},
+				{
+					"key": "LOCALE",
+					"value": "fr-FR",
+					"description": "Locale de l'application"
+				},
+				{
+					"key": "PORT",
+					"value": "3000",
+					"description": "Port de l'application"
+				},
+				{
+					"key": "ZITADEL_API_URL",
+					"value": "http://zitadel:8080",
+					"required": true,
+					"description": "URL de l'API ZITADEL (interne)"
+				},
+				{
+					"key": "EXTERNAL_DOMAIN",
+					"value": "",
+					"required": true,
+					"description": "Domaine externe de votre application (ex: app.example.com)"
+				},
+				{
+					"key": "CUSTOM_REQUEST_HEADERS",
+					"value": "",
+					"required": true,
+					"description": "Headers personnalisés pour les requêtes"
+				},
+				{
+					"key": "NEXT_PUBLIC_BASE_PATH",
+					"value": "/ui/v2/login",
+					"required": true,
+					"description": "Chemin de base pour l'interface de login"
+				},
+				{
+					"key": "ZITADEL_SERVICE_USER_TOKEN_FILE",
+					"value": "/app/secrets/login-client.pat",
+					"required": true,
+					"description": "Chemin vers le fichier de token du service user"
+				}
+			],
+			"ports": [
+				{
+					"internal": 3000,
+					"external": 3000,
+					"protocol": "http"
+				}
+			],
+			"volumes": [
+				{
+					"name": "config",
+					"mountPath": "/app/config",
+					"description": "Configuration personnalisée"
+				}
+			],
+			"healthcheck": {
+				"test": [
+					"CMD",
+					"wget",
+					"--quiet",
+					"--tries=1",
+					"--spider",
+					"http://localhost:3000/health"
+				],
+				"interval": "30s",
+				"timeout": "10s",
+				"retries": 3,
+				"startPeriod": "40s"
+			}
+		}
+	],
+	"repository": {
+		"url": "https://github.com/VOTRE-USERNAME/typescript",
+		"branch": "main"
+	},
+	"documentation": {
+		"readme": "README.md",
+		"links": [
+			{
+				"title": "Documentation ZITADEL",
+				"url": "https://docs.zitadel.com"
+			},
+			{
+				"title": "Guide de démarrage",
+				"url": "https://docs.zitadel.com/docs/quickstarts/introduction"
+			}
+		]
+	},
+	"requirements": {
+		"memory": "512Mi",
+		"cpu": "0.5",
+		"storage": "1Gi"
+	}
+}
