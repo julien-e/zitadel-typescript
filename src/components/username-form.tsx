@@ -53,19 +53,19 @@ export function UsernameForm({
 	async function submitLoginName(values: Inputs, organization?: string) {
 		setLoading(true);
 
-		const res = await sendLoginname({
-			loginName: values.loginName,
-			organization,
-			requestId,
-			suffix,
-		})
-			.catch(() => {
-				setError("An internal error occurred");
-				return;
-			})
-			.finally(() => {
-				setLoading(false);
-			});
+    const res = await sendLoginname({
+      loginName: values.loginName,
+      organization,
+      requestId,
+      suffix,
+    })
+      .catch(() => {
+        setError(t("errors.internalError"));
+        return;
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
 		if (res && "redirect" in res && res.redirect) {
 			return router.push(res.redirect);

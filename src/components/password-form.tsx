@@ -50,9 +50,8 @@ export function PasswordForm({ loginSettings, loginName, organization, requestId
       }),
       requestId,
     })
-      .catch((error) => {
-        setError("Could not verify password");
-        console.error("Error verifying password:", error);
+      .catch(() => {
+        setError(t("verify.errors.couldNotVerifyPassword"));
         return;
       })
       .finally(() => {
@@ -85,10 +84,18 @@ export function PasswordForm({ loginSettings, loginName, organization, requestId
 		}
 	}
 
-	async function resetPasswordAndContinue() {
-		setError("");
-		setInfo("");
-		setLoading(true);
+    const response = await resetPassword({
+      loginName,
+      organization,
+      requestId,
+    })
+      .catch(() => {
+        setError(t("verify.errors.couldNotResetPassword"));
+        return;
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
 		const response = await resetPassword({
 			loginName,
@@ -103,10 +110,7 @@ export function PasswordForm({ loginSettings, loginName, organization, requestId
 				setLoading(false);
 			});
 
-		if (response && "error" in response) {
-			setError(response.error);
-			return;
-		}
+    setInfo(t("verify.info.passwordResetSent"));
 
 		setInfo("Password was reset. Please check your email.");
 
