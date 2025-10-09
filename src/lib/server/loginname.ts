@@ -21,6 +21,7 @@ import {
   startIdentityProviderFlow,
 } from "../zitadel";
 import { createSessionAndUpdateCookie } from "./cookie";
+import { getOriginalHost } from "./host";
 
 export type SendLoginnameCommand = {
   loginName: string;
@@ -34,11 +35,6 @@ const ORG_SUFFIX_REGEX = /(?<=@)(.+)/;
 export async function sendLoginname(command: SendLoginnameCommand) {
   const _headers = await headers();
   const { serviceUrl } = getServiceUrlFromHeaders(_headers);
-  const host = _headers.get("host");
-
-  if (!host) {
-    throw new Error("Could not get domain");
-  }
 
   const loginSettingsByContext = await getLoginSettings({
     serviceUrl,
@@ -80,11 +76,7 @@ export async function sendLoginname(command: SendLoginnameCommand) {
     if (identityProviders.length === 1) {
       const _headers = await headers();
       const { serviceUrl } = getServiceUrlFromHeaders(_headers);
-      const host = _headers.get("host");
-
-      if (!host) {
-        return { error: "Could not get host" };
-      }
+      const host = await getOriginalHost();
 
       const identityProviderType = identityProviders[0].type;
 
@@ -134,11 +126,7 @@ export async function sendLoginname(command: SendLoginnameCommand) {
     if (identityProviders.length === 1) {
       const _headers = await headers();
       const { serviceUrl } = getServiceUrlFromHeaders(_headers);
-      const host = _headers.get("host");
-
-      if (!host) {
-        return { error: "Could not get host" };
-      }
+      const host = await getOriginalHost();
 
       const identityProviderId = identityProviders[0].idpId;
 
@@ -201,35 +189,21 @@ export async function sendLoginname(command: SendLoginnameCommand) {
     });
 
     // compare with the concatenated suffix when set
-    const concatLoginname = command.suffix
-      ? `${command.loginName}@${command.suffix}`
-      : command.loginName;
+    const concatLoginname = command.suffix ? `${command.loginName}@${command.suffix}` : command.loginName;
 
-    const humanUser =
-      potentialUsers[0].type.case === "human"
-        ? potentialUsers[0].type.value
-        : undefined;
+    const humanUser = potentialUsers[0].type.case === "human" ? potentialUsers[0].type.value : undefined;
 
     // recheck login settings after user discovery, as the search might have been done without org scope
-    if (
-      userLoginSettings?.disableLoginWithEmail &&
-      userLoginSettings?.disableLoginWithPhone
-    ) {
+    if (userLoginSettings?.disableLoginWithEmail && userLoginSettings?.disableLoginWithPhone) {
       if (user.preferredLoginName !== concatLoginname) {
         return { error: "User not found in the system!" };
       }
     } else if (userLoginSettings?.disableLoginWithEmail) {
-      if (
-        user.preferredLoginName !== concatLoginname ||
-        humanUser?.phone?.phone !== command.loginName
-      ) {
+      if (user.preferredLoginName !== concatLoginname || humanUser?.phone?.phone !== command.loginName) {
         return { error: "User not found in the system!" };
       }
     } else if (userLoginSettings?.disableLoginWithPhone) {
-      if (
-        user.preferredLoginName !== concatLoginname ||
-        humanUser?.email?.email !== command.loginName
-      ) {
+      if (user.preferredLoginName !== concatLoginname || humanUser?.email?.email !== command.loginName) {
         return { error: "User not found in the system!" };
       }
     }
@@ -270,11 +244,7 @@ export async function sendLoginname(command: SendLoginnameCommand) {
       }
 
       if (command.organization || session.factors?.user?.organizationId) {
-        params.append(
-          "organization",
-          command.organization ??
-            (session.factors?.user?.organizationId as string),
-        );
+        params.append("organization", command.organization ?? (session.factors?.user?.organizationId as string));
       }
 
       return { redirect: `/verify?` + params };
@@ -285,9 +255,14 @@ export async function sendLoginname(command: SendLoginnameCommand) {
       switch (method) {
         case AuthenticationMethodType.PASSWORD: // user has only password as auth method
           if (!userLoginSettings?.allowUsernamePassword) {
+            // Check if user has IDPs available as alternative, that could eventually be used to register/link.
+            const idpResp = await redirectUserToIDP(userId);
+            if (idpResp?.redirect) {
+              return idpResp;
+            }
+
             return {
-              error:
-                "Username Password not allowed! Contact your administrator for more information.",
+              error: "Username Password not allowed! Contact your administrator for more information.",
             };
           }
 
@@ -298,10 +273,7 @@ export async function sendLoginname(command: SendLoginnameCommand) {
           // TODO: does this have to be checked in loginSettings.allowDomainDiscovery
 
           if (command.organization || session.factors?.user?.organizationId) {
-            paramsPassword.append(
-              "organization",
-              command.organization ?? session.factors?.user?.organizationId,
-            );
+            paramsPassword.append("organization", command.organization ?? session.factors?.user?.organizationId);
           }
 
           if (command.requestId) {
@@ -315,8 +287,7 @@ export async function sendLoginname(command: SendLoginnameCommand) {
         case AuthenticationMethodType.PASSKEY: // AuthenticationMethodType.AUTHENTICATION_METHOD_TYPE_PASSKEY
           if (userLoginSettings?.passkeysType === PasskeysType.NOT_ALLOWED) {
             return {
-              error:
-                "Passkeys not allowed! Contact your administrator for more information.",
+              error: "Passkeys not allowed! Contact your administrator for more information.",
             };
           }
 
@@ -328,20 +299,26 @@ export async function sendLoginname(command: SendLoginnameCommand) {
           }
 
           if (command.organization || session.factors?.user?.organizationId) {
-            paramsPasskey.append(
-              "organization",
-              command.organization ?? session.factors?.user?.organizationId,
-            );
+            paramsPasskey.append("organization", command.organization ?? session.factors?.user?.organizationId);
           }
 
           return { redirect: "/passkey?" + paramsPasskey };
+
+        case AuthenticationMethodType.IDP:
+          const resp = await redirectUserToIDP(userId);
+
+          if (resp?.error) {
+            return { error: resp.error };
+          }
+
+          return resp;
       }
     } else {
       // prefer passkey in favor of other methods
       if (methods.authMethodTypes.includes(AuthenticationMethodType.PASSKEY)) {
         const passkeyParams = new URLSearchParams({
           loginName: session.factors?.user?.loginName,
-          altPassword: `${methods.authMethodTypes.includes(1)}`, // show alternative password option
+          altPassword: `${methods.authMethodTypes.includes(AuthenticationMethodType.PASSWORD) && userLoginSettings?.allowUsernamePassword}`, // show alternative password option only if allowed
         });
 
         if (command.requestId) {
@@ -349,21 +326,21 @@ export async function sendLoginname(command: SendLoginnameCommand) {
         }
 
         if (command.organization || session.factors?.user?.organizationId) {
-          passkeyParams.append(
-            "organization",
-            command.organization ?? session.factors?.user?.organizationId,
-          );
+          passkeyParams.append("organization", command.organization ?? session.factors?.user?.organizationId);
         }
 
         return { redirect: "/passkey?" + passkeyParams };
-      } else if (
-        methods.authMethodTypes.includes(AuthenticationMethodType.IDP)
-      ) {
+      } else if (methods.authMethodTypes.includes(AuthenticationMethodType.IDP)) {
         return redirectUserToIDP(userId);
-      } else if (
-        methods.authMethodTypes.includes(AuthenticationMethodType.PASSWORD)
-      ) {
-        // user has no passkey setup and login settings allow passkeys
+      } else if (methods.authMethodTypes.includes(AuthenticationMethodType.PASSWORD)) {
+        // Check if password authentication is allowed
+        if (!userLoginSettings?.allowUsernamePassword) {
+          return {
+            error: "Username Password not allowed! Contact your administrator for more information.",
+          };
+        }
+
+        // user has no passkey setup and login settings allow passwords
         const paramsPasswordDefault = new URLSearchParams({
           loginName: session.factors?.user?.loginName,
         });
@@ -373,10 +350,7 @@ export async function sendLoginname(command: SendLoginnameCommand) {
         }
 
         if (command.organization || session.factors?.user?.organizationId) {
-          paramsPasswordDefault.append(
-            "organization",
-            command.organization ?? session.factors?.user?.organizationId,
-          );
+          paramsPasswordDefault.append("organization", command.organization ?? session.factors?.user?.organizationId);
         }
 
         return {
@@ -387,19 +361,13 @@ export async function sendLoginname(command: SendLoginnameCommand) {
   }
 
   // user not found, check if register is enabled on instance / organization context
-  if (
-    loginSettingsByContext?.allowRegister &&
-    !loginSettingsByContext?.allowUsernamePassword
-  ) {
+  if (loginSettingsByContext?.allowRegister && !loginSettingsByContext?.allowUsernamePassword) {
     const resp = await redirectUserToSingleIDPIfAvailable();
     if (resp) {
       return resp;
     }
     return { error: "User not found in the system" };
-  } else if (
-    loginSettingsByContext?.allowRegister &&
-    loginSettingsByContext?.allowUsernamePassword
-  ) {
+  } else if (loginSettingsByContext?.allowRegister && loginSettingsByContext?.allowUsernamePassword) {
     let orgToRegisterOn: string | undefined = command.organization;
 
     if (
@@ -416,8 +384,7 @@ export async function sendLoginname(command: SendLoginnameCommand) {
         serviceUrl,
         domain: suffix,
       });
-      const orgToCheckForDiscovery =
-        orgs.result && orgs.result.length === 1 ? orgs.result[0].id : undefined;
+      const orgToCheckForDiscovery = orgs.result && orgs.result.length === 1 ? orgs.result[0].id : undefined;
 
       const orgLoginSettings = await getLoginSettings({
         serviceUrl,

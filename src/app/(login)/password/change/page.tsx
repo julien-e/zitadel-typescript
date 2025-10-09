@@ -10,7 +10,14 @@ import {
   getLoginSettings,
   getPasswordComplexitySettings,
 } from "@/lib/zitadel";
+import { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("password");
+  return { title: t('change.title')};
+}
 
 export default async function Page(props: {
   searchParams: Promise<Record<string | number | symbol, string | undefined>>;
@@ -55,7 +62,7 @@ export default async function Page(props: {
           )}
         </h1>
         <p className="ztdl-p mb-6 block">
-          <Translated i18nKey="change.description" namespace="u2f" />
+          <Translated i18nKey="change.description" namespace="password" />
         </p>
 
         {/* show error only if usernames should be shown to be unknown */}
