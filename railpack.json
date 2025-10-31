@@ -9,7 +9,7 @@
 		{
 			"name": "zitadel-typescript-fr",
 			"type": "application",
-			"image": "node:18-alpine",
+			"image": "node:22-alpine",
 			"buildConfig": {
 				"dockerfile": "Dockerfile",
 				"context": "."
